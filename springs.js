@@ -5,7 +5,7 @@ class Spring {
     mass = 1,
     stiffness = 100,
     damping = 10,
-    properties = ['transform'],
+    properties = ['transform'], // Default property to animate
     preset = null,
   } = {}) {
     this.mass = mass;
@@ -49,15 +49,14 @@ class Spring {
   }
 
   applyToElement(element) {
-    const A = 0;
-    const B = parseFloat(getComputedStyle(element).transform.split(',')[5]) || 0;
+    const A = 0; 
+    const B = parseFloat(getComputedStyle(element).transform.split(',')[5]) || 0; 
     const a = this.stiffness;
     const c = this.damping;
 
     let startTime;
-
     const bezierCurve = this.generateBezierCurve();
-    element.style.transition = `transform ${this.duration}s ${bezierCurve}`;
+    element.style.transition = `all ${this.duration}s ${bezierCurve}`; // Change to apply all transitions
 
     const animate = (time) => {
       if (!startTime) startTime = time;
@@ -65,14 +64,14 @@ class Spring {
 
       const newValue = this.calculateSpringValue(A, B, a, c, t);
       this.properties.forEach(property => {
-        element.style[property] = newValue; 
+        element.style[property] = property === 'transform' ? `translateY(${newValue}px)` : newValue; // Update each property
       });
 
       if (t < this.duration) {
         requestAnimationFrame(animate);
       } else {
         this.properties.forEach(property => {
-          element.style[property] = `${A}`; 
+          element.style[property] = property === 'transform' ? `${A}px` : ''; // Ensure it finishes at the target position
         });
       }
     };
@@ -80,26 +79,19 @@ class Spring {
     requestAnimationFrame(animate);
   }
 
-  generateBezierCurve() {
-    const x1 = this.bounce > 0 ? 0.42 : (this.bounce < 0 ? 0.3 : 0.25);
-    const y1 = this.bounce > 0 ? 1.75 : (this.bounce < 0 ? 0.6 : 0.1);
-    const x2 = this.bounce > 0 ? 0.58 : (this.bounce < 0 ? 0.7 : 0.75);
-    const y2 = 1.0;
-
-    return `cubic-bezier(${x1}, ${y1}, ${x2}, ${y2})`;
-  }
-
   static fromAttributes(element) {
-    const duration = element.getAttribute('data-spring-duration') || 0.5;
-    const bounce = element.getAttribute('data-spring-bounce') || 0.2;
-    const mass = element.getAttribute('data-spring-mass') || 1;
+    const duration = parseFloat(element.getAttribute('data-spring-duration')) || 0.5;
+    const bounce = parseFloat(element.getAttribute('data-spring-bounce')) || 0.2;
+    const mass = parseFloat(element.getAttribute('data-spring-mass')) || 1;
     const propertiesAttr = element.getAttribute('data-spring-properties');
-    const properties = propertiesAttr ? propertiesAttr.split(',').map(prop => prop.trim()) : ['transform'];
+    const properties = propertiesAttr 
+      ? propertiesAttr.split(',').map(prop => prop.trim()) // Trim whitespace
+      : ['transform'];
 
     return new Spring({
-      duration: parseFloat(duration),
-      bounce: parseFloat(bounce),
-      mass: parseFloat(mass),
+      duration,
+      bounce,
+      mass,
       properties,
     });
   }
