@@ -1,260 +1,245 @@
+# Spring Animation System Documentation
 
+A lightweight and flexible spring-based animation system for web applications, inspired by iOS animation patterns. The system provides both physics-based spring animations and optimized bezier curve alternatives.
 
-# **Spring Animations Documentation**
+## Table of Contents
+- [Installation](#installation)
+- [Basic Usage](#basic-usage)
+- [Configuration Options](#configuration-options)
+- [Presets](#presets)
+- [Advanced Usage](#advanced-usage)
+- [HTML Data Attributes](#html-data-attributes)
+- [API Reference](#api-reference)
 
-    
+## Installation
 
-This plugin enables realistic spring animations for HTML elements using custom attributes. It offers control over animation parameters like duration, bounce, stiffness, damping, and mass. 
-
-  
-
-**Features**
-
-  
-
-•  **Spring Physics-Based Animations**: Create smooth animations using spring dynamics with parameters such as bounce, stiffness, and damping.
-
-•  **Customizable CSS Properties**: Specify which CSS properties to animate, such as color, border-color, transform, and more.
-
-•  **Shorthand Support**: Configure all animation parameters in a single data-spring attribute.
-
-•  **Presets for Quick Configuration**: Use predefined animation presets for common configurations.
-
-•  **Negative Bounce Support**: Define bounce values from -1 to 1 for a variety of spring responses.
-
-
-•  **Fallback Defaults**: Unspecified parameters revert to sensible defaults, allowing you to configure only the essential elements.
-
-
-  
-
-
-**Installation**
----
-  
-
-**Option 1: Direct Download**
-
-  
-
-1.  Download the spring-animation.js file.
-
-2.  Include the file in your HTML:
-
-  
-```
-<script src="https://cdn.jsdelivr.net/gh/OZORDI/spring-animations@main/springs.js"></script>
+```javascript
+// Import the Spring class
+import { Spring } from './spring.js';
 ```
 
-  
+## Basic Usage
 
-  
+### Using Presets
 
-  
-
-**Option 2: Install via npm**
-
-  
-
-1.  Install the package using npm:
-
-  
-```
-npm install @ozordi/springs  
+```javascript
+// Create a spring animation using a preset
+const spring = Spring.fromPreset('bouncy');
+const element = document.querySelector('.animated-element');
+spring.animate(element, 0, 100); // Animates from 0 to 100px
 ```
 
-  
+### Custom Configuration
 
-  
+```javascript
+// Create a spring with custom duration and bounce
+const spring = new Spring({
+  duration: 0.5,  // seconds
+  bounce: 0.3,    // range: -1 to 1
+  properties: ['transform', 'opacity']  // properties to animate
+});
 
-2.  Import it in your JavaScript file:
-
-  
-```
-import  '@ozordi/springs';
-```
-
-  
-
-  
-
-  
-
-**Usage**
----
-  
-
-The plugin uses data attributes to configure animations. You can set up animations through:
-
-  
-
-1. **Shorthand**: Use the data-spring attribute for quick configuration.
-
-2. **Custom Attributes**: Use individual attributes for more control.
-
-  
-
-**Basic Example**
-
-  
-
-To apply a spring animation, add the data-spring attribute to an HTML element:
-
-  
-
-
-
-`<div data-spring="duration:0.5, bounce:0.4, properties:color,border-color"> Example </div>`
-  
-
-This applies a spring animation to both color and border-color with a duration of 0.5 seconds and a bounce factor of 0.4.
-
-  
-
-**Shorthand Example**
-
-  
-
-Configure all parameters in the data-spring attribute:
-
-  
-
-`<div data-spring="duration:0.6, bounce:0.3, properties:background-color,transform" class="example"> Example </div>`
-
-  
-
-This animates the background-color and transform properties with a 0.6-second duration and a bounce value of 0.3.
-
-  
-
-**Custom Attributes Example**
-
-  
-
-For more precise control, use individual data-spring attributes:
-
-  `<div data-spring-duration="0.45" data-spring-bounce="0.5" data-spring-properties="color,border-color">  Example </div>`
-
-
-
-
-  
-
-This applies a spring animation with a 0.45-second duration, 0.5 bounce, and animates color and border-color.
-
-  
-
-**Custom Attributes**
-
-  
-
-You can use individual custom attributes to fine-tune animations:
-
-  
-
-
-| Attribute                        | Description                                      | Default Value | Example Value                               |
-|-----------------------------------|--------------------------------------------------|---------------|---------------------------------------------|
-| `data-spring-duration`            | Sets the duration of the animation (in seconds)  | 0.5           | 0.45                                        |
-| `data-spring-bounce`              | Controls the bounce intensity (0 = no bounce)    | 0.2           | 0.4                                         |
-| `data-spring-mass`                | Defines the mass of the object                  | 1             | 1.5                                         |
-| `data-spring-stiffness`           | Adjusts the stiffness of the spring             | 100           | 150                                         |
-| `data-spring-damping`             | Regulates how quickly the spring loses momentum | 10            | 7                                           |
-| `data-spring-properties`          | Comma-separated list of CSS properties to animate | `transform`   | `color,border-color,background-color`       |
-| `data-spring-perceptual-duration` | Controls the perceived duration of the animation | 1             | 1.5 
-| `data-spring-preset` | Apply a preset configuration for common animation styles | N/A             | `smooth`                                   
-
-
-**Example with Custom Attributes**  
-
-`<div data-spring-duration="0.6" data-spring-bounce="0.3" data-spring-stiffness="150" data-spring-damping="8" data-spring-properties="background-color,transform" class="example"> Example </div>`  
-
-  
-
-
-
-  
-
-In this case, the animation uses a 0.6-second duration, 0.3 bounce, 150 stiffness, and 8 damping, affecting background-color and transform.
-
-  
-
-**Shorthand Format**
-
-  
-
-The data-spring attribute allows you to configure all settings in a single string. The format is:
-
-  
-```  
-data-spring="key1:value1, key2:value2, ..."
+// Animate multiple properties
+spring.animate(element, 0, 1);
 ```
 
-  
+### Physics-based Configuration
 
-**Supported Keys**
+```javascript
+// Create a spring using physics parameters
+const spring = Spring.fromPhysics(
+  1,      // mass
+  100,    // stiffness
+  10,     // damping
+  false   // useBezier
+);
+```
 
-  
+## Configuration Options
 
-•  **duration**: Animation duration in seconds (0.45)
+### Core Parameters
 
-•  **bounce**: Bounce intensity (0.4)
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `duration` | Number | 0.5 | Animation duration in seconds |
+| `bounce` | Number | 0 | Bounce factor (-1 to 1). Negative values create overdamped springs |
+| `properties` | Array | ['transform'] | Properties to animate |
+| `bezierAnimation` | Boolean | false | Use bezier curve instead of spring physics |
+| `mass` | Number | 1 | Spring mass (physics-based) |
+| `stiffness` | Number | Calculated | Spring stiffness (physics-based) |
+| `damping` | Number | Calculated | Spring damping (physics-based) |
 
-•  **stiffness**: Spring stiffness (150)
+## Presets
 
-•  **damping**: Momentum loss rate (8)
+The system includes three built-in presets:
 
-•  **mass**: Object’s mass (1.5)
+```javascript
+// Available presets
+const PRESETS = {
+  'bouncy': {
+    duration: 0.7,
+    bounce: 0.4
+  },
+  'smooth': {
+    duration: 0.5,
+    bounce: 0
+  },
+  'flattened': {
+    duration: 0.4,
+    bounce: -0.2
+  }
+};
+```
 
-•  **properties**: CSS properties to animate (color,border-color,background-color)
+## Advanced Usage
 
-  
+### Bezier Curve Animation
 
-**Example with Shorthand**
+```javascript
+// Create a spring with bezier curve animation
+const spring = new Spring({
+  duration: 0.5,
+  bounce: 0.3,
+  bezierAnimation: true
+});
 
-  
+// The system will automatically generate appropriate bezier curve control points
+```
 
-`<a data-spring="duration:0.3, bounce:0.4, properties:color,border-color,background-color" href="/gallery"> Gallery </a>`
+### Multiple Properties
 
+```javascript
+// Animate multiple properties simultaneously
+const spring = new Spring({
+  duration: 0.6,
+  bounce: 0.2,
+  properties: ['transform', 'opacity', 'scale']
+});
 
- **Presets**
---- 
-The plugin includes three predefined presets for common animation styles that can be applied easily:
-1. ``bouncy``: A higher bounce value for an energetic spring effect.
+element.style.opacity = '0';
+element.style.transform = 'scale(0.8)';
 
-2. ``smooth``: A smooth deceleration without bounce.
+spring.animate(element, 0, 1);
+```
 
-3. ``flattened``: A slower, more deliberate motion with a negative bounce.
+## HTML Data Attributes
 
-**Momentum Tracking**
----
-  
+The system supports configuration via HTML data attributes:
 
-The plugin intelligently tracks the momentum and velocity of animated elements. If the element’s size or position changes during the animation:
+```html
+<!-- Basic configuration -->
+<div data-spring="duration:0.5, bounce:0.3">Animated element</div>
 
-  
+<!-- Multiple properties -->
+<div data-spring="duration:0.5, bounce:0.3, properties:transform opacity, bezierAnimation:true">
+  Animated element
+</div>
 
-•  **Size Changes**: It detects changes in surface area (height * width) to adjust the animation accordingly.
+<!-- Using presets -->
+<div data-spring="preset:bouncy">Animated element</div>
+```
 
-•  **Position Changes**: It monitors the CSS transform property for any movement.
+JavaScript initialization from HTML:
 
-  
+```javascript
+const element = document.querySelector('[data-spring]');
+const spring = Spring.fromElement(element);
+if (spring) {
+  spring.animate(element, 0, 100);
+}
+```
 
-This ensures smooth transitions even if the target properties change mid-animation, maintaining the fluidity of the animation.
+## API Reference
 
-**Important Notes**
----
-  
+### Static Methods
 
-•  **No spaces**: Avoid spaces around colons (:) and commas (,).
+#### `Spring.fromPreset(presetName, useBezier = false)`
+Creates a spring instance from a preset configuration.
 
-•  The plugin falls back to default values for missing parameters.
+#### `Spring.fromPhysics(mass, stiffness, damping, useBezier = false)`
+Creates a spring instance using physics-based parameters.
 
-  
+#### `Spring.fromDurationAndBounce(duration, bounce, useBezier = false)`
+Creates a spring instance using duration and bounce parameters.
 
-**License**
+#### `Spring.fromElement(element)`
+Creates a spring instance from HTML data attributes.
 
-  
+### Instance Methods
 
-This plugin is licensed under the MIT License. For more details, see the [LICENSE](https://github.com/OZORDI/spring-animations/blob/main/LICENSE) file.
-  
+#### `animate(element, startValue, endValue)`
+Animates the specified element from startValue to endValue.
+
+#### `generateBezierPoints()`
+Generates bezier curve control points based on spring parameters.
+
+#### `calculateSpringValue(t)`
+Calculates the spring position at time t.
+
+### Supported Properties
+
+The system supports animating the following CSS properties:
+- `transform` (translateY)
+- `opacity`
+- `scale`
+- Any numeric CSS property (px units will be automatically applied)
+
+## Best Practices
+
+1. **Choose the Right Configuration Method**
+   - Use presets for common animations
+   - Use duration/bounce for simple customization
+   - Use physics parameters for precise control
+
+2. **Performance Considerations**
+   - Use `bezierAnimation: true` for simpler animations
+   - Limit the number of simultaneous animations
+   - Prefer transform/opacity for better performance
+
+3. **Browser Support**
+   - Works in all modern browsers
+   - Uses requestAnimationFrame for smooth animations
+   - Falls back to duration-based animation when necessary
+
+## Examples
+
+### Basic Animation
+
+```javascript
+// Simple translation animation
+const spring = new Spring({
+  duration: 0.5,
+  bounce: 0.2
+});
+
+const element = document.querySelector('.button');
+element.addEventListener('click', () => {
+  spring.animate(element, 0, -20); // Moves up 20px
+});
+```
+
+### Complex Animation
+
+```javascript
+// Multiple properties with physics-based configuration
+const spring = Spring.fromPhysics(1, 120, 14, false);
+spring.properties = ['transform', 'scale', 'opacity'];
+
+const element = document.querySelector('.card');
+element.addEventListener('mouseenter', () => {
+  spring.animate(element, 0, 1);
+});
+```
+
+### Preset with Bezier
+
+```javascript
+// Smooth animation using bezier curves
+const spring = Spring.fromPreset('smooth', true);
+const element = document.querySelector('.menu');
+
+function toggleMenu() {
+  const isOpen = element.classList.toggle('open');
+  spring.animate(element, isOpen ? 0 : -100, isOpen ? 100 : 0);
+}
+```
