@@ -12,12 +12,22 @@ A lightweight and flexible spring-based animation system for web applications, i
 - [API Reference](#api-reference)
 
 ## Installation
+Option 1: Direct Download
 
+Download the spring-animation.js file.
+
+Include the file in your HTML:
+```javascript
+// Spring Animations Library
+<script src="https://cdn.jsdelivr.net/gh/OZORDI/spring-animations@main/springs.js"></script>
+```
+Option 2: Add the library to your project
+
+Import the spring-animation.js file.
 ```javascript
 // Import the Spring class
 import { Spring } from './spring.js';
 ```
-
 ## Basic Usage
 
 ### Using Presets
