@@ -1,144 +1,206 @@
 class Spring {
-  constructor({
-    duration = 0.5,
-    bounce = 0.2,
-    mass = 1,
-    stiffness = 100,
-    damping = 10,
-    properties = ['transform'],
-    preset = null,
-  } = {}) {
-    this.mass = mass;
-    this.stiffness = stiffness;
-    this.damping = damping;
+  // Presets based on common use cases from iOS
+  static PRESETS = {
+    'bouncy': {
+      duration: 0.7,
+      bounce: 0.4
+    },
+    'smooth': {
+      duration: 0.5,
+      bounce: 0
+    },
+    'flattened': {
+      duration: 0.4,
+      bounce: -0.2
+    }
+  };
+
+  constructor(config = {}) {
+    if (typeof config === 'string') {
+      if (!Spring.PRESETS[config]) {
+        throw new Error(`Unknown preset: ${config}`);
+      }
+      this.initFromDurationAndBounce(Spring.PRESETS[config]);
+    } else if ('mass' in config && 'stiffness' in config && 'damping' in config) {
+      this.mass = config.mass;
+      this.stiffness = config.stiffness;
+      this.damping = config.damping;
+      this.duration = 2 * Math.PI / Math.sqrt(this.stiffness / this.mass);
+      this.bounce = this.calculateBounceFromDamping();
+    } else {
+      this.initFromDurationAndBounce({
+        duration: config.duration || 0.5,
+        bounce: Math.max(-1, Math.min(1, config.bounce || 0))
+      });
+    }
+
+    this.properties = Array.isArray(config.properties) ? 
+      config.properties : ['transform'];
+    
+    this.useBezier = config.bezierAnimation || false;
+  }
+
+  initFromDurationAndBounce({ duration, bounce }) {
     this.duration = duration;
     this.bounce = bounce;
-    this.properties = properties;
-
-    if (preset) this.applyPreset(preset);
-  }
-
-  applyPreset(preset) {
-    const presets = {
-      bouncy: { bounce: 0.4, stiffness: 200, damping: 5 },
-      smooth: { bounce: 0, stiffness: 100, damping: 8 },
-      flattened: { bounce: -0.4, stiffness: 80, damping: 15 },
-    };
-    const presetConfig = presets[preset.toLowerCase()];
-    if (presetConfig) {
-      this.bounce = presetConfig.bounce;
-      this.stiffness = presetConfig.stiffness;
-      this.damping = presetConfig.damping;
-    }
-  }
-
-  springEquation1(A, B, a, c, t) {
-    return (A * Math.exp(a * t) + B * Math.exp(-a * t)) * Math.exp(-c * t);
-  }
-
-  springEquation2(A, B, c, t) {
-    return (A * t + B) * Math.exp(-c * t);
-  }
-
-  calculateSpringValue(A, B, a, c, t) {
-    if (this.bounce > 0) {
-      return this.springEquation1(A, B, a, c, t);
+    this.mass = 1;
+    this.stiffness = Math.pow((2 * Math.PI) / duration, 2);
+    
+    if (bounce >= 0) {
+      this.damping = (1 - 4 * Math.PI * bounce / duration);
     } else {
-      return this.springEquation2(A, B, c, t);
+      this.damping = (4 * Math.PI) / (duration + 4 * Math.PI * bounce);
     }
   }
 
-  applyToElement(element) {
-    const A = 0; // Desired position (final position)
-    const B = parseFloat(getComputedStyle(element).transform.split(',')[5]) || 0; // Current position
-    const a = this.stiffness;
-    const c = this.damping;
+  calculateBounceFromDamping() {
+    const criticalDamping = 2 * Math.sqrt(this.mass * this.stiffness);
+    return (criticalDamping - this.damping) / criticalDamping;
+  }
 
-    let startTime;
+  // New method to generate bezier curve control points based on spring parameters
+  generateBezierPoints() {
+    // For non-bouncy springs (bounce <= 0)
+    if (this.bounce <= 0) {
+      const x1 = 0.16 + (0.12 * Math.abs(this.bounce)); // Adjust start handle
+      const y1 = 0;
+      const x2 = 0.28 + (0.12 * Math.abs(this.bounce)); // Adjust end handle
+      const y2 = 1;
+      return [x1, y1, x2, y2];
+    }
+    
+    // For bouncy springs (bounce > 0)
+    // Calculate overshoot based on bounce value
+    const overshoot = this.bounce * 0.2; // 20% of bounce value determines overshoot
+    const x1 = 0.2;
+    const y1 = 0.2 + overshoot;
+    const x2 = 0.8;
+    const y2 = 1 + overshoot;
+    
+    return [x1, y1, x2, y2];
+  }
 
-    const bezierCurve = this.generateBezierCurve();
-    element.style.transition = `all ${this.duration}s ${bezierCurve}`;
-
-    const animate = (time) => {
-      if (!startTime) startTime = time;
-      const t = (time - startTime) / 1000;
-
-      const newValue = this.calculateSpringValue(A, B, a, c, t);
-      this.properties.forEach(property => {
-        element.style[property] = property === 'transform' ? `translateY(${newValue}px)` : newValue; 
-      });
-
-      if (t < this.duration) {
-        requestAnimationFrame(animate);
-      } else {
-        this.properties.forEach(property => {
-          element.style[property] = property === 'transform' ? `${A}px` : ''; 
-        });
+  // New method to apply bezier curve animation
+  applyBezierAnimation(element, property, startValue, endValue) {
+    const [x1, y1, x2, y2] = this.generateBezierPoints();
+    const bezierCurve = `cubic-bezier(${x1}, ${y1}, ${x2}, ${y2})`;
+    
+    element.style.transition = `${property} ${this.duration}s ${bezierCurve}`;
+    
+    // For transform properties, handle special cases
+    if (property === 'transform') {
+      if (typeof startValue === 'number' && typeof endValue === 'number') {
+        element.style.transform = `translateY(${endValue}px)`;
       }
+    } else if (property === 'scale') {
+      element.style.transform = `scale(${endValue})`;
+    } else {
+      element.style[property] = typeof endValue === 'number' ? `${endValue}px` : endValue;
+    }
+  }
+
+  // Enhanced animate method to handle both spring and bezier animations
+  animate(element, startValue, endValue) {
+    if (this.useBezier) {
+      this.properties.forEach(property => {
+        this.applyBezierAnimation(element, property, startValue, endValue);
+      });
+      return;
+    }
+
+    // Original spring animation logic
+    const startTime = performance.now();
+    const totalDistance = endValue - startValue;
+    
+    const tick = (currentTime) => {
+      const elapsed = (currentTime - startTime) / 1000;
+      
+      if (elapsed >= this.duration * 1.5) {
+        this.updateElementProperties(element, endValue);
+        return;
+      }
+      
+      const springProgress = this.calculateSpringValue(elapsed);
+      const currentValue = startValue + (totalDistance * springProgress);
+      
+      this.updateElementProperties(element, currentValue);
+      requestAnimationFrame(tick);
     };
-
-    requestAnimationFrame(animate);
+    
+    requestAnimationFrame(tick);
   }
 
-  generateBezierCurve() {
-    const x1 = this.bounce > 0 ? 0.42 : (this.bounce < 0 ? 0.3 : 0.25);
-    const y1 = this.bounce > 0 ? 1.75 : (this.bounce < 0 ? 0.6 : 0.1);
-    const x2 = this.bounce > 0 ? 0.58 : (this.bounce < 0 ? 0.7 : 0.75);
-    const y2 = 1.0;
-
-    return `cubic-bezier(${x1}, ${y1}, ${x2}, ${y2})`;
+  calculateSpringValue(t) {
+    const normalizedTime = t / this.duration;
+    
+    if (this.bounce > 0) {
+      const omega = Math.sqrt(this.stiffness / this.mass);
+      const zeta = this.damping / (2 * Math.sqrt(this.mass * this.stiffness));
+      return Math.exp(-zeta * omega * normalizedTime) * 
+             Math.cos(omega * Math.sqrt(1 - zeta * zeta) * normalizedTime);
+    } else {
+      const a = this.damping + Math.sqrt(this.damping * this.damping - 4 * this.stiffness);
+      const b = this.damping - Math.sqrt(this.damping * this.damping - 4 * this.stiffness);
+      return (Math.exp(-a * normalizedTime) + Math.exp(-b * normalizedTime)) / 2;
+    }
   }
 
-  static fromAttributes(element) {
-    const duration = parseFloat(element.getAttribute('data-spring-duration')) || 0.5;
-    const bounce = parseFloat(element.getAttribute('data-spring-bounce')) || 0.2;
-    const mass = parseFloat(element.getAttribute('data-spring-mass')) || 1;
-    const propertiesAttr = element.getAttribute('data-spring-properties');
-
-    // Split properties into an array or fallback to default
-    const properties = propertiesAttr ? propertiesAttr.split(',').map(prop => prop.trim()) : ['transform'];
-
-    return new Spring({
-      duration,
-      bounce,
-      mass,
-      properties,
+  updateElementProperties(element, value) {
+    this.properties.forEach(property => {
+      switch (property) {
+        case 'transform':
+          element.style.transform = `translateY(${value}px)`;
+          break;
+        case 'opacity':
+          element.style.opacity = value;
+          break;
+        case 'scale':
+          element.style.transform = `scale(${value})`;
+          break;
+        default:
+          if (typeof value === 'number') {
+            element.style[property] = `${value}px`;
+          }
+      }
     });
   }
 
-  static parseShorthand(springShorthand) {
-    const params = springShorthand.split(',').reduce((acc, param) => {
-      let [key, value] = param.split(':').map(item => item.trim());
-      if (key && value) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {});
+  // Static helper to parse HTML data attributes
+  static parseDataAttribute(element) {
+    const springData = element.dataset.spring;
+    if (!springData) return null;
 
-    return {
-      duration: parseFloat(params.duration) || 0.5,
-      bounce: parseFloat(params.bounce) || 0.2,
-      mass: parseFloat(params.mass) || 1,
-      properties: params.properties ? params.properties.split(',').map(prop => prop.trim()) : ['transform'],
-    };
+    const params = {};
+    springData.split(',').forEach(pair => {
+      const [key, value] = pair.split(':').map(s => s.trim());
+      if (key === 'properties') {
+        params[key] = value.split(' ');
+      } else if (key === 'bezierAnimation') {
+        params[key] = value.toLowerCase() === 'true';
+      } else if (!isNaN(value)) {
+        params[key] = parseFloat(value);
+      } else {
+        params[key] = value;
+      }
+    });
+    return params;
+  }
+
+  // Static methods for initialization
+  static fromPreset(presetName, useBezier = false) {
+    return new Spring({ ...Spring.PRESETS[presetName], bezierAnimation: useBezier });
+  }
+
+  static fromPhysics(mass, stiffness, damping, useBezier = false) {
+    return new Spring({ mass, stiffness, damping, bezierAnimation: useBezier });
+  }
+
+  static fromDurationAndBounce(duration, bounce, useBezier = false) {
+    return new Spring({ duration, bounce, bezierAnimation: useBezier });
+  }
+
+  static fromElement(element) {
+    const config = Spring.parseDataAttribute(element);
+    return config ? new Spring(config) : null;
   }
 }
-
-// Utility to automatically apply spring animations based on attributes
-function applySpringAnimationsFromAttributes() {
-  const elements = document.querySelectorAll('*');
-
-  elements.forEach((element) => {
-    const attributes = Array.from(element.attributes);
-    const hasSpringAttribute = attributes.some(attr => attr.name.startsWith('data-spring'));
-
-    if (hasSpringAttribute) {
-      const spring = Spring.fromAttributes(element);
-      if (spring) {
-        spring.applyToElement(element);
-      }
-    }
-  });
-}
-
-document.addEventListener('DOMContentLoaded', applySpringAnimationsFromAttributes);
